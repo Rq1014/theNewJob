@@ -1,0 +1,16 @@
+export const categoryLabels: Record<string, string> = {
+  interview: '面经',
+  offer: '内定',
+  es: 'ES',
+  'career-qa': '求职问答',
+  'company-review': '企业评价',
+  housing: '租房',
+  medical: '医疗',
+  food: '美食',
+  finance: '办卡',
+  admin: '手续',
+  moving: '搬家',
+  'part-time': '兼职',
+  'second-hand': '二手',
+  guide: '攻略',
+};

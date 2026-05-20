@@ -1,0 +1,46 @@
+import {
+  FileText,
+  Trophy,
+  HelpCircle,
+  Home,
+  Stethoscope,
+  Utensils,
+  CreditCard,
+  FileEdit,
+  Users,
+  Building,
+} from "lucide-react";
+
+export const categoryIcons: Record<string, any> = {
+  interview: FileText,
+  offer: Trophy,
+  es: FileEdit,
+  "career-qa": HelpCircle,
+  "company-review": Building,
+  housing: Home,
+  medical: Stethoscope,
+  food: Utensils,
+  finance: CreditCard,
+  admin: FileText,
+  moving: Home,
+  "part-time": Users,
+  "second-hand": Users,
+  guide: FileText,
+};
+
+export const categoryLabels: Record<string, string> = {
+  interview: "面经",
+  offer: "内定",
+  es: "ES",
+  "career-qa": "求职问答",
+  "company-review": "企业评价",
+  housing: "租房",
+  medical: "医疗",
+  food: "美食",
+  finance: "办卡",
+  admin: "手续",
+  moving: "搬家",
+  "part-time": "兼职",
+  "second-hand": "二手",
+  guide: "攻略",
+};
