@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { authApi } from '../../api/services';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuthStore } from '../../store/authStore';
-import type { OtpAuthIntent, OtpChannel } from '../../api/types';
+import type { OtpChannel } from '../../api/types';
 import type { AuthStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
 
@@ -14,18 +14,11 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'OtpLogin'>;
 
 export function OtpLoginScreen({ navigation, route }: Props) {
   const channel: OtpChannel = route.params?.channel ?? 'email';
-  const mode: OtpAuthIntent = route.params.mode;
   const [target, setTarget] = useState('');
   const [code, setCode] = useState('');
   const [cooldown, setCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
   const setSession = useAuthStore(s => s.setSession);
-
-  useEffect(() => {
-    setTarget('');
-    setCode('');
-    setCooldown(0);
-  }, [mode, channel]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -40,7 +33,7 @@ export function OtpLoginScreen({ navigation, route }: Props) {
     }
     try {
       setLoading(true);
-      await authApi.sendOtp(channel, target.trim(), mode);
+      await authApi.sendOtp(channel, target.trim());
       setCooldown(60);
       Alert.alert('验证码已发送', '开发环境请使用 123456');
     } catch (e) {
@@ -57,13 +50,13 @@ export function OtpLoginScreen({ navigation, route }: Props) {
     }
     try {
       setLoading(true);
-      const tokens = await authApi.verifyOtp(channel, target.trim(), code.trim(), mode);
+      const tokens = await authApi.verifyOtp(channel, target.trim(), code.trim());
       await setSession(tokens.accessToken, tokens.refreshToken, tokens.user);
       if (tokens.user.profileStatus === 'incomplete') {
         navigation.replace('ProfileSetup');
       }
     } catch (e) {
-      Alert.alert(mode === 'register' ? '注册失败' : '登录失败', (e as Error).message);
+      Alert.alert('登录失败', (e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -72,15 +65,7 @@ export function OtpLoginScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <ScreenHeader
-        title={
-          mode === 'register'
-            ? channel === 'email'
-              ? '邮箱注册'
-              : '手机注册'
-            : channel === 'email'
-              ? '邮箱登录'
-              : '手机登录'
-        }
+        title={channel === 'email' ? '邮箱登录' : '手机登录'}
         onBack={() => navigation.goBack()}
       />
       <View style={styles.body}>
@@ -103,29 +88,14 @@ export function OtpLoginScreen({ navigation, route }: Props) {
         <Button
           title={cooldown > 0 ? `${cooldown}s 后重发` : '获取验证码'}
           variant="secondary"
+          style={styles.otpBtn}
           disabled={cooldown > 0}
           loading={loading}
           onPress={sendOtp}
         />
-        <Button
-          title={mode === 'register' ? '完成注册' : '登录'}
-          style={styles.loginBtn}
-          loading={loading}
-          onPress={verify}
-        />
-        <Text style={styles.hint}>开发环境验证码：123456</Text>
-        <Pressable
-          onPress={() =>
-            navigation.navigate('OtpLogin', {
-              channel,
-              mode: mode === 'login' ? 'register' : 'login',
-            })
-          }
-          style={styles.switchRow}>
-          <Text style={styles.switchText}>
-            {mode === 'login' ? '没有账号？去注册' : '已有账号？去登录'}
-          </Text>
-        </Pressable>
+        <Button title="登录" style={styles.loginBtn} loading={loading} onPress={verify} />
+        <Text style={styles.hint}>未注册的手机号或邮箱验证后将自动创建账号</Text>
+        <Text style={styles.devHint}>开发环境验证码：123456</Text>
       </View>
     </View>
   );
@@ -133,9 +103,9 @@ export function OtpLoginScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  body: { padding: spacing.lg },
-  loginBtn: { marginTop: 16 },
-  hint: { marginTop: 16, fontSize: 12, color: colors.textMuted, textAlign: 'center' },
-  switchRow: { marginTop: 20, alignItems: 'center' },
-  switchText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
+  body: { padding: spacing.lg, gap: 0 },
+  otpBtn: { marginTop: 16 },
+  loginBtn: { marginTop: 12 },
+  hint: { marginTop: 16, fontSize: 12, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
+  devHint: { marginTop: 8, fontSize: 12, color: colors.textMuted, textAlign: 'center' },
 });

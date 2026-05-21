@@ -12,7 +12,6 @@ import type {
   Comment,
   Draft,
   FeedChannel,
-  OtpAuthIntent,
   OtpChannel,
   PageResult,
   Post,
@@ -24,49 +23,20 @@ const delay = (ms = 400) => new Promise<void>(r => setTimeout(() => r(), ms));
 let mockPosts = [...MOCK_POSTS];
 let mockDrafts = [...MOCK_DRAFTS];
 
-/** Mock：已通过邮箱/手机 OTP 完成注册的账号（channel + 小写 target） */
-const mockRegisteredOtpTargets = new Set<string>();
-
-function otpAccountKey(channel: OtpChannel, target: string) {
-  return `${channel}:${target.trim().toLowerCase()}`;
-}
-
 export const authApi = {
-  async sendOtp(channel: OtpChannel, target: string, intent: OtpAuthIntent) {
+  async sendOtp(channel: OtpChannel, target: string) {
     if (USE_MOCK_API) {
       await delay();
-      const key = otpAccountKey(channel, target);
-      if (intent === 'register' && mockRegisteredOtpTargets.has(key)) {
-        throw new Error('该账号已注册，请使用「登录」');
-      }
-      if (intent === 'login' && !mockRegisteredOtpTargets.has(key)) {
-        throw new Error('该账号尚未注册，请先完成注册');
-      }
       return { expiresIn: 300, cooldown: 60 };
     }
-    const res = await apiClient.post('/auth/otp/send', { channel, target, intent });
+    const res = await apiClient.post('/auth/otp/send', { channel, target });
     return unwrap(res);
   },
 
-  async verifyOtp(
-    channel: OtpChannel,
-    target: string,
-    code: string,
-    intent: OtpAuthIntent,
-  ): Promise<AuthTokens> {
+  async verifyOtp(channel: OtpChannel, target: string, code: string): Promise<AuthTokens> {
     if (USE_MOCK_API) {
       await delay();
       if (code !== '123456') throw new Error('验证码错误，开发环境请使用 123456');
-      const key = otpAccountKey(channel, target);
-      if (intent === 'login' && !mockRegisteredOtpTargets.has(key)) {
-        throw new Error('该账号尚未注册，请先完成注册');
-      }
-      if (intent === 'register' && mockRegisteredOtpTargets.has(key)) {
-        throw new Error('该账号已注册，请使用「登录」');
-      }
-      if (intent === 'register') {
-        mockRegisteredOtpTargets.add(key);
-      }
       return {
         accessToken: 'mock-access',
         refreshToken: 'mock-refresh',
@@ -74,7 +44,7 @@ export const authApi = {
         user: { ...MOCK_USER, profileStatus: 'incomplete', nickname: null },
       };
     }
-    const res = await apiClient.post('/auth/otp/verify', { channel, target, code, intent });
+    const res = await apiClient.post('/auth/otp/verify', { channel, target, code });
     return unwrap(res);
   },
 

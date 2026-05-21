@@ -1,6 +1,4 @@
 export type OtpChannel = 'email' | 'phone';
-/** 验证码流程：注册创建账号，登录仅限已注册账号 */
-export type OtpAuthIntent = 'register' | 'login';
 export type ProfileStatus = 'incomplete' | 'complete';
 export type FeedChannel = 'follow' | 'discover' | 'local';
 export type ContentDomain = 'career' | 'life';

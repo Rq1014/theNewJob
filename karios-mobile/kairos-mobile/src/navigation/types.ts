@@ -2,7 +2,8 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type AuthStackParamList = {
   AuthWelcome: undefined;
-  OtpLogin: { channel?: 'email' | 'phone'; mode: 'register' | 'login' };
+  OtpLogin: { channel?: 'email' | 'phone' };
+  LegalDocument: { doc: 'terms' | 'privacy' };
   ProfileSetup: undefined;
 };
 

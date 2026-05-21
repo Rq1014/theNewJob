@@ -1,0 +1,2 @@
+// 复制为 Local.xcconfig 并填入你的 Team ID（Xcode → Settings → Accounts → Team 详情）
+// DEVELOPMENT_TEAM = ABCDE12345

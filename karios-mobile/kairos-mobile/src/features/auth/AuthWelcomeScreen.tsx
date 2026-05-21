@@ -1,7 +1,13 @@
-import React from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { authApi } from '../../api/services';
+import { OtherLoginSheet } from '../../components/auth/OtherLoginSheet';
+import { TermsAgreementRow } from '../../components/auth/TermsAgreementRow';
+import { Button } from '../../components/ui/Button';
+import { useAuthStore } from '../../store/authStore';
+import { colors, spacing } from '../../theme';
+import type { AuthStackParamList } from '../../navigation/types';
 
 let appleAuth: {
   isSupported: boolean;
@@ -17,17 +23,32 @@ try {
 } catch {
   appleAuth = null;
 }
-import { Button } from '../../components/ui/Button';
-import { useAuthStore } from '../../store/authStore';
-import { colors, spacing } from '../../theme';
-import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'AuthWelcome'>;
 
 export function AuthWelcomeScreen({ navigation }: Props) {
   const setSession = useAuthStore(s => s.setSession);
+  const [agreed, setAgreed] = useState(false);
+  const [otherLoginOpen, setOtherLoginOpen] = useState(false);
+
+  const requireAgreement = () => {
+    if (agreed) return true;
+    Alert.alert('提示', '请先阅读并同意用户协议与隐私政策');
+    return false;
+  };
+
+  const goOtp = (channel: 'email' | 'phone') => {
+    if (!requireAgreement()) return;
+    navigation.navigate('OtpLogin', { channel });
+  };
+
+  const openOtherLogin = () => {
+    if (!requireAgreement()) return;
+    setOtherLoginOpen(true);
+  };
 
   const handleApple = async () => {
+    if (!requireAgreement()) return;
     try {
       if (Platform.OS === 'ios' && appleAuth?.isSupported) {
         const res = await appleAuth.performRequest({
@@ -52,53 +73,46 @@ export function AuthWelcomeScreen({ navigation }: Props) {
     }
   };
 
+  const showApple = Platform.OS === 'ios';
+
   return (
     <View style={styles.container}>
       <View style={styles.hero}>
         <Text style={styles.logo}>Kairos</Text>
         <Text style={styles.subtitle}>在日留学生社区</Text>
         <Text style={styles.desc}>分享留学、求职与生活经验</Text>
-        <Text style={styles.flowHint}>新用户请先注册，再使用邮箱或手机号登录</Text>
       </View>
       <View style={styles.actions}>
-        <Text style={styles.sectionLabel}>注册</Text>
-        <Button
-          title="邮箱注册"
-          onPress={() => navigation.navigate('OtpLogin', { channel: 'email', mode: 'register' })}
-        />
-        <Button
-          title="手机号注册"
-          variant="secondary"
-          style={styles.gap}
-          onPress={() => navigation.navigate('OtpLogin', { channel: 'phone', mode: 'register' })}
-        />
-        <Text style={[styles.sectionLabel, styles.sectionSpacer]}>登录</Text>
-        <Button
-          title="邮箱登录"
-          variant="secondary"
-          onPress={() => navigation.navigate('OtpLogin', { channel: 'email', mode: 'login' })}
-        />
-        <Button
-          title="手机号登录"
-          variant="secondary"
-          style={styles.gap}
-          onPress={() => navigation.navigate('OtpLogin', { channel: 'phone', mode: 'login' })}
-        />
-        {Platform.OS === 'ios' ? (
-          <>
-            <Text style={[styles.sectionLabel, styles.sectionSpacer]}>其他方式</Text>
-            <Button
-              title="通过 Apple 登录"
-              variant="secondary"
-              onPress={handleApple}
-            />
-            <Text style={styles.appleHint}>首次使用将创建账号</Text>
-          </>
+        <Button title="手机号登录" onPress={() => goOtp('phone')} />
+        {showApple ? (
+          <Button
+            title="通过 Apple 登录"
+            variant="secondary"
+            style={styles.gap}
+            onPress={handleApple}
+          />
         ) : null}
+        <Pressable style={[styles.otherBtn, !showApple && styles.gap]} onPress={openOtherLogin}>
+          <Text style={styles.otherBtnText}>其他登录方式</Text>
+        </Pressable>
+        <View style={styles.termsWrap}>
+          <TermsAgreementRow
+            checked={agreed}
+            onToggle={() => setAgreed(v => !v)}
+            onPressTerms={() => navigation.navigate('LegalDocument', { doc: 'terms' })}
+            onPressPrivacy={() => navigation.navigate('LegalDocument', { doc: 'privacy' })}
+          />
+        </View>
         <View style={styles.wechatRow}>
           <Text style={styles.wechatText}>微信登录（即将上线）</Text>
         </View>
       </View>
+
+      <OtherLoginSheet
+        visible={otherLoginOpen}
+        onClose={() => setOtherLoginOpen(false)}
+        onEmailLogin={() => goOtp('email')}
+      />
     </View>
   );
 }
@@ -120,29 +134,20 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   desc: { fontSize: 14, color: colors.textSecondary, marginTop: 8 },
-  flowHint: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginTop: 14,
-    textAlign: 'center',
-    paddingHorizontal: spacing.md,
-    lineHeight: 20,
-  },
   actions: { width: '100%' },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  sectionSpacer: { marginTop: 20 },
   gap: { marginTop: 12 },
-  appleHint: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 8,
-    textAlign: 'center',
+  otherBtn: {
+    marginTop: 12,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  wechatRow: { marginTop: 24, alignItems: 'center' },
+  otherBtnText: {
+    fontSize: 15,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  termsWrap: { marginTop: 20 },
+  wechatRow: { marginTop: 20, alignItems: 'center' },
   wechatText: { fontSize: 13, color: colors.textMuted },
 });
