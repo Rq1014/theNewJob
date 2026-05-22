@@ -2,7 +2,7 @@
 
 数据库：MySQL 8.0+，字符集 `utf8mb4`，排序规则 `utf8mb4_unicode_ci`。
 
-迁移脚本位置：`kairos-service/src/main/resources/db/migration/V1__init_schema.sql`
+迁移脚本位置：`preparationWork/sql/kairos_init_schema.sql`（与 [登录注册后端TRD.md](./登录注册后端TRD.md) §16 一致）
 
 ---
 
@@ -56,10 +56,12 @@
 | profile_status | VARCHAR(16) | incomplete / complete |
 | status | VARCHAR(16) | active / suspended / deleted |
 | is_verified | TINYINT(1) | 认证用户 |
+| primary_credential | VARCHAR(16) NULL | 首次注册渠道 phone / email / apple |
+| last_login_at | DATETIME NULL | 最近登录时间 |
 | created_at | DATETIME | |
 | updated_at | DATETIME | |
 
-索引：`idx_users_status (status)`, `idx_users_city (city)`
+索引：`idx_users_status (status)`, `idx_users_city (city)`, `idx_users_profile_status (profile_status)`
 
 ---
 
@@ -77,6 +79,43 @@
 
 唯一索引：`uk_provider_uid (provider, provider_user_id)`  
 索引：`idx_bindings_user (user_id)`
+
+---
+
+### user_terms_consents
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| id | BIGINT PK AUTO | |
+| user_id | BIGINT FK → users.id | |
+| terms_version | VARCHAR(32) | 用户协议版本 |
+| privacy_version | VARCHAR(32) | 隐私政策版本 |
+| agreed_at | DATETIME | |
+| client_ip | VARCHAR(64) NULL | |
+| user_agent | VARCHAR(256) NULL | |
+| device_id | VARCHAR(64) NULL | 客户端设备 ID |
+
+索引：`idx_consents_user (user_id)`
+
+---
+
+### user_sessions
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| id | BIGINT PK AUTO | sessionId，对应 JWT `sid` |
+| user_id | BIGINT FK → users.id | |
+| refresh_jti | VARCHAR(64) | Refresh Token 的 jti |
+| device_id | VARCHAR(64) NULL | |
+| device_name | VARCHAR(128) NULL | |
+| platform | VARCHAR(16) NULL | ios / android |
+| ip | VARCHAR(64) NULL | |
+| last_active_at | DATETIME | |
+| revoked_at | DATETIME NULL | 登出时间 |
+| created_at | DATETIME | |
+
+唯一索引：`uk_sessions_refresh_jti (refresh_jti)`  
+索引：`idx_sessions_user (user_id)`
 
 ---
 
@@ -200,8 +239,11 @@
 |-----|-----|------|
 | `otp:{channel}:{target}` | 300s | 验证码 |
 | `otp:rate:{channel}:{target}` | 60s | 发送频率限制 |
+| `otp:daily:{channel}:{target}` | 24h | 日发送计数 |
+| `rate:ip:{ip}` | 60s | IP 限流 |
+| `rate:device:{deviceId}` | 60s | 设备限流 |
 | `jwt:blacklist:{jti}` | 至 token 过期 | 登出黑名单 |
-| `refresh:{userId}:{tokenId}` | 7d | refresh token |
+| `refresh:{userId}:{jti}` | 7d | refresh token |
 
 ---
 
@@ -209,6 +251,8 @@
 
 ```
 users 1──* user_auth_bindings
+users 1──* user_terms_consents
+users 1──* user_sessions
 users 1──* posts
 users 1──* drafts
 posts 1──* post_images

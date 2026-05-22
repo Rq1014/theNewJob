@@ -33,6 +33,8 @@ export interface AuthTokens {
   refreshToken: string;
   expiresIn: number;
   user: UserSummary;
+  /** 是否本次为新注册用户 */
+  isNewUser?: boolean;
 }
 
 export interface PostAuthor {

@@ -33,8 +33,8 @@ export function OtpLoginScreen({ navigation, route }: Props) {
     }
     try {
       setLoading(true);
-      await authApi.sendOtp(channel, target.trim());
-      setCooldown(60);
+      const sent = await authApi.sendOtp(channel, target.trim());
+      setCooldown(sent.cooldown > 0 ? sent.cooldown : 60);
       Alert.alert('验证码已发送', '开发环境请使用 123456');
     } catch (e) {
       Alert.alert('发送失败', (e as Error).message);

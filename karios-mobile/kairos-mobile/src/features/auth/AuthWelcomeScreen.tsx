@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { USE_REAL_AUTH_API } from '../../config';
 import { authApi } from '../../api/services';
 import { OtherLoginSheet } from '../../components/auth/OtherLoginSheet';
 import { TermsAgreementRow } from '../../components/auth/TermsAgreementRow';
@@ -55,21 +56,36 @@ export function AuthWelcomeScreen({ navigation }: Props) {
           requestedOperation: appleAuth.Operation.LOGIN,
           requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
         });
+        const appleUser =
+          res.fullName || res.email
+            ? {
+                email: res.email ?? undefined,
+                fullName: res.fullName
+                  ? {
+                      givenName: res.fullName.givenName ?? undefined,
+                      familyName: res.fullName.familyName ?? undefined,
+                    }
+                  : undefined,
+              }
+            : undefined;
         const tokens = await authApi.loginApple(
           res.identityToken!,
           res.authorizationCode ?? undefined,
+          appleUser,
         );
         await setSession(tokens.accessToken, tokens.refreshToken, tokens.user);
         if (tokens.user.profileStatus === 'incomplete') {
           navigation.replace('ProfileSetup');
         }
-      } else {
+      } else if (!USE_REAL_AUTH_API) {
         const tokens = await authApi.loginApple('mock-token');
         await setSession(tokens.accessToken, tokens.refreshToken, tokens.user);
         navigation.replace('ProfileSetup');
+      } else {
+        Alert.alert('提示', 'Apple 登录仅支持 iOS 设备');
       }
     } catch (e) {
-      console.warn(e);
+      Alert.alert('登录失败', (e as Error).message);
     }
   };
 

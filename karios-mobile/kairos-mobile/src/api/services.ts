@@ -1,5 +1,15 @@
-import { USE_MOCK_API } from '../config';
+import {
+  API_BASE_URL,
+  PRIVACY_VERSION,
+  setLegalVersions,
+  TERMS_VERSION,
+  USE_MOCK_CONTENT_API,
+  USE_REAL_AUTH_API,
+} from '../config';
+import { useAuthStore } from '../store/authStore';
+import { authDeviceContext } from './device';
 import { apiClient, unwrap } from './client';
+import { normalizeAuthTokens, normalizeUserProfile } from './normalize';
 import {
   MOCK_COMMENTS,
   MOCK_DRAFTS,
@@ -23,18 +33,42 @@ const delay = (ms = 400) => new Promise<void>(r => setTimeout(() => r(), ms));
 let mockPosts = [...MOCK_POSTS];
 let mockDrafts = [...MOCK_DRAFTS];
 
+function authPayload(extra: Record<string, unknown> = {}) {
+  return {
+    termsVersion: TERMS_VERSION,
+    privacyVersion: PRIVACY_VERSION,
+    ...authDeviceContext(),
+    ...extra,
+  };
+}
+
+export const legalApi = {
+  async fetchVersions(): Promise<{ termsVersion: string; privacyVersion: string }> {
+    const res = await apiClient.get('/legal/terms');
+    return unwrap(res);
+  },
+};
+
 export const authApi = {
   async sendOtp(channel: OtpChannel, target: string) {
-    if (USE_MOCK_API) {
+    if (!USE_REAL_AUTH_API) {
       await delay();
       return { expiresIn: 300, cooldown: 60 };
     }
-    const res = await apiClient.post('/auth/otp/send', { channel, target });
-    return unwrap(res);
+    const res = await apiClient.post('/auth/otp/send', {
+      channel,
+      target,
+      ...authPayload(),
+    });
+    return unwrap<{ expiresIn: number; cooldown: number }>(res);
   },
 
-  async verifyOtp(channel: OtpChannel, target: string, code: string): Promise<AuthTokens> {
-    if (USE_MOCK_API) {
+  async verifyOtp(
+    channel: OtpChannel,
+    target: string,
+    code: string,
+  ): Promise<AuthTokens> {
+    if (!USE_REAL_AUTH_API) {
       await delay();
       if (code !== '123456') throw new Error('验证码错误，开发环境请使用 123456');
       return {
@@ -44,12 +78,24 @@ export const authApi = {
         user: { ...MOCK_USER, profileStatus: 'incomplete', nickname: null },
       };
     }
-    const res = await apiClient.post('/auth/otp/verify', { channel, target, code });
-    return unwrap(res);
+    const res = await apiClient.post('/auth/otp/verify', {
+      channel,
+      target,
+      code,
+      ...authPayload(),
+    });
+    return normalizeAuthTokens(unwrap(res) as Record<string, unknown>);
   },
 
-  async loginApple(identityToken: string, authorizationCode?: string): Promise<AuthTokens> {
-    if (USE_MOCK_API) {
+  async loginApple(
+    identityToken: string,
+    authorizationCode?: string,
+    user?: {
+      email?: string | null;
+      fullName?: { givenName?: string | null; familyName?: string | null };
+    },
+  ): Promise<AuthTokens> {
+    if (!USE_REAL_AUTH_API) {
       await delay();
       return {
         accessToken: 'mock-access',
@@ -61,37 +107,52 @@ export const authApi = {
     const res = await apiClient.post('/auth/oauth/apple', {
       identityToken,
       authorizationCode,
+      user,
+      ...authPayload(),
     });
-    return unwrap(res);
+    return normalizeAuthTokens(unwrap(res) as Record<string, unknown>);
   },
 
   async logout(refreshToken: string) {
-    if (USE_MOCK_API) {
+    if (!USE_REAL_AUTH_API) {
       return;
     }
     await apiClient.post('/auth/logout', { refreshToken });
   },
 
   async getBindings(): Promise<AuthBinding[]> {
-    if (USE_MOCK_API) {
+    if (!USE_REAL_AUTH_API) {
       return [
-        { provider: 'email', maskedTarget: 'u***@example.com', createdAt: new Date().toISOString() },
+        {
+          provider: 'email',
+          maskedTarget: 'u***@example.com',
+          createdAt: new Date().toISOString(),
+        },
       ];
     }
     const res = await apiClient.get('/auth/bindings');
-    return unwrap<{ bindings: AuthBinding[] }>(res).bindings;
+    const data = unwrap<{ bindings: AuthBinding[] }>(res);
+    return data.bindings.map(b => ({
+      ...b,
+      createdAt:
+        typeof b.createdAt === 'string'
+          ? b.createdAt
+          : new Date(b.createdAt as unknown as string).toISOString(),
+    }));
   },
 };
 
 export const userApi = {
   async getMe(): Promise<UserProfile> {
-    if (USE_MOCK_API) return { ...MOCK_USER };
+    if (!USE_REAL_AUTH_API) {
+      return { ...MOCK_USER };
+    }
     const res = await apiClient.get('/users/me');
-    return unwrap(res);
+    return normalizeUserProfile(unwrap(res) as Record<string, unknown>);
   },
 
   async updateMe(data: Partial<UserProfile>): Promise<UserProfile> {
-    if (USE_MOCK_API) {
+    if (!USE_REAL_AUTH_API) {
       await delay();
       Object.assign(MOCK_USER, data);
       if (data.nickname && data.university && data.city) {
@@ -100,11 +161,11 @@ export const userApi = {
       return { ...MOCK_USER };
     }
     const res = await apiClient.put('/users/me', data);
-    return unwrap(res);
+    return normalizeUserProfile(unwrap(res) as Record<string, unknown>);
   },
 
   async getUser(id: string): Promise<UserProfile> {
-    if (USE_MOCK_API) {
+    if (!USE_REAL_AUTH_API) {
       return {
         id,
         nickname: '社区用户',
@@ -117,8 +178,20 @@ export const userApi = {
         postsCount: 12,
       };
     }
-    const res = await apiClient.get(`/users/${id}`);
-    return unwrap(res);
+    const currentId = useAuthStore.getState().user?.id;
+    if (currentId === id) {
+      return userApi.getMe();
+    }
+    return {
+      id,
+      nickname: '社区用户',
+      avatarUrl: null,
+      profileStatus: 'complete',
+      isVerified: false,
+      university: null,
+      city: null,
+      bio: null,
+    };
   },
 };
 
@@ -129,7 +202,7 @@ export const postApi = {
     tag?: string;
     page?: number;
   }): Promise<PageResult<Post>> {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       await delay();
       let items = [...mockPosts];
       if (params.tag) {
@@ -153,7 +226,7 @@ export const postApi = {
   },
 
   async search(q: string): Promise<PageResult<Post>> {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       await delay();
       const items = mockPosts.filter(
         p => p.title.includes(q) || p.summary.includes(q) || p.tags.some(t => t.includes(q)),
@@ -165,7 +238,7 @@ export const postApi = {
   },
 
   async getById(id: string): Promise<Post> {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       await delay();
       const post = mockPosts.find(p => p.id === id);
       if (!post) throw new Error('帖子不存在');
@@ -183,7 +256,7 @@ export const postApi = {
     content: string;
     tags?: string[];
   }): Promise<Post> {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       await delay();
       const post: Post = {
         id: String(Date.now()),
@@ -215,7 +288,7 @@ export const postApi = {
   },
 
   async like(id: string) {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       const p = mockPosts.find(x => x.id === id);
       if (p) {
         p.likes += 1;
@@ -227,7 +300,7 @@ export const postApi = {
   },
 
   async unlike(id: string) {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       const p = mockPosts.find(x => x.id === id);
       if (p) {
         p.likes = Math.max(0, p.likes - 1);
@@ -239,7 +312,7 @@ export const postApi = {
   },
 
   async getComments(postId: string): Promise<Comment[]> {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       await delay();
       return MOCK_COMMENTS[postId] || [];
     }
@@ -248,7 +321,7 @@ export const postApi = {
   },
 
   async addComment(postId: string, content: string): Promise<Comment> {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       const c: Comment = {
         id: String(Date.now()),
         author: {
@@ -272,7 +345,7 @@ export const postApi = {
   },
 
   async getMyPosts(): Promise<Post[]> {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       return mockPosts.filter(p => p.author.id === MOCK_USER.id);
     }
     const res = await apiClient.get('/users/me/posts');
@@ -280,7 +353,7 @@ export const postApi = {
   },
 
   async getMyFavorites(): Promise<Post[]> {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       return mockPosts.slice(0, 2);
     }
     const res = await apiClient.get('/users/me/favorites');
@@ -290,13 +363,13 @@ export const postApi = {
 
 export const draftApi = {
   async list(): Promise<Draft[]> {
-    if (USE_MOCK_API) return [...mockDrafts];
+    if (USE_MOCK_CONTENT_API) return [...mockDrafts];
     const res = await apiClient.get('/drafts');
     return unwrap<PageResult<Draft>>(res).items;
   },
 
   async save(data: Partial<Draft> & { content: string; category: string }): Promise<Draft> {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       const draft: Draft = {
         id: data.id || String(Date.now()),
         category: data.category,
@@ -319,10 +392,21 @@ export const draftApi = {
   },
 
   async remove(id: string) {
-    if (USE_MOCK_API) {
+    if (USE_MOCK_CONTENT_API) {
       mockDrafts = mockDrafts.filter(d => d.id !== id);
       return;
     }
     await apiClient.delete(`/drafts/${id}`);
   },
 };
+
+/** 启动时拉取协议版本（失败则沿用 config 默认值） */
+export async function bootstrapApiConfig(): Promise<void> {
+  if (!USE_REAL_AUTH_API) return;
+  try {
+    const versions = await legalApi.fetchVersions();
+    setLegalVersions(versions.termsVersion, versions.privacyVersion);
+  } catch (e) {
+    console.warn('[bootstrapApiConfig] legal versions', API_BASE_URL, e);
+  }
+}

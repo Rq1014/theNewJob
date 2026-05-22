@@ -36,8 +36,12 @@ npm run ios
 
 ## 配置
 
-- `src/config.ts`：`API_BASE_URL`、`USE_MOCK_API`（默认 `true`，无需后端即可运行）
-- 对接后端时设 `USE_MOCK_API = false`，并启动 `kairos-service`
+- `src/config.ts`：
+  - `USE_REAL_AUTH_API`（默认 `true`）：登录、用户资料、退出登录走 `karios-service-api`
+  - `USE_MOCK_CONTENT_API`（默认 `true`）：帖子/草稿等仍用本地 Mock（后端未实现）
+  - `DEV_HOST`：真机调试时改为电脑局域网 IP
+- 先启动后端：`cd karios-service-api && ./mvnw spring-boot:run`
+- 开发 OTP 验证码：`123456`（与后端 `kairos.auth.otp.dev-code` 一致）
 
 ## 目录
 

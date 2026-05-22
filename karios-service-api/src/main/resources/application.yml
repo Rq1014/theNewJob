@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: karios-service-api
+  datasource:
+    # characterEncoding 须为 UTF-8；库表字符集仍为 utf8mb4（见 connectionCollation）
+    url: jdbc:mysql://127.0.0.1:3306/kairos?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=Asia/Tokyo&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: Rq991014@
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: KairosHikariPool
+      minimum-idle: 1
+      maximum-pool-size: 10
+      connection-timeout: 10000
+      initialization-fail-timeout: 1
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+  type-aliases-package: org.example.karios.entity
+
+kairos:
+  legal:
+    terms-version: "2026-05-01"
+    privacy-version: "2026-05-01"
+  auth:
+    jwt:
+      secret: ${JWT_SECRET:kairos-dev-jwt-secret-key-32bytes!!}
+      access-ttl-seconds: 900
+      refresh-ttl-days: 7
+    otp:
+      ttl-seconds: 300
+      cooldown-seconds: 60
+      daily-limit: 10
+      dev-code: "123456"
+    apple:
+      bundle-id: org.reactjs.native.example.KairosMobile
+      dev-mode: true
+    risk:
+      ip-per-minute: 30
+      device-per-minute: 20
+  gateway:
+    whitelist:
+      - "POST:/api/v1/auth/otp/send"
+      - "POST:/api/v1/auth/otp/verify"
+      - "POST:/api/v1/auth/oauth/apple"
+      - "POST:/api/v1/auth/oauth/wechat"
+      - "POST:/api/v1/auth/oauth/google"
+      - "POST:/api/v1/auth/refresh"
+      - "GET:/api/v1/health"
+      - "GET:/api/v1/legal/terms"
+
+logging:
+  level:
+    org.example.karios: DEBUG
