@@ -8,6 +8,8 @@ public class UpdateUserRequest {
     private String nickname;
     private String avatarUrl;
     private String bio;
+    /** 兴趣爱好，逗号分隔 */
+    private String interests;
     private String university;
     private String city;
     private String userType;

@@ -48,16 +48,17 @@ export function EditProfileScreen({ navigation }: Props) {
       setBio(u.bio || '');
       setUniversity(u.university || '');
       setLocation(u.city ? (CITY_REVERSE[u.city] ?? '东京') : '东京');
-      setInterests('探店, 摄影, 日语学习');
+      setInterests(u.interests || '');
     });
   }, []);
 
   const save = async () => {
     try {
       setLoading(true);
-      const user = await userApi.updateMe({
+      const user = await userApi.updateProfile({
         nickname: nickname.trim(),
         bio: bio.trim(),
+        interests: interests.trim(),
         city: CITY_MAP[location] ?? 'tokyo',
       });
       setUser(user);

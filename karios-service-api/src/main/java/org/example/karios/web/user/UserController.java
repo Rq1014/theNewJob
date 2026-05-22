@@ -6,6 +6,8 @@ import org.example.karios.gateway.CurrentUser;
 import org.example.karios.model.request.user.UpdateUserRequest;
 import org.example.karios.model.response.user.UserProfileResponse;
 import org.example.karios.service.user.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
+
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
 
@@ -31,6 +35,13 @@ public class UserController {
     @PutMapping("/me")
     public ApiResponse<UserProfileResponse> updateMe(
             @CurrentUser Long userId, @Valid @RequestBody UpdateUserRequest request) {
+        log.debug(
+                "PUT /users/me userId={} fields: nickname={}, bio={}, interests={}, city={}",
+                userId,
+                request.getNickname() != null,
+                request.getBio() != null,
+                request.getInterests() != null,
+                request.getCity() != null);
         return ApiResponse.ok(userService.updateMe(userId, request));
     }
 }

@@ -34,6 +34,10 @@ public class UserEntity {
     @TableField("bio")
     private String bio;
 
+    /** 兴趣爱好，逗号分隔 */
+    @TableField("interests")
+    private String interests;
+
     /** 学校名称 */
     @TableField("university")
     private String university;

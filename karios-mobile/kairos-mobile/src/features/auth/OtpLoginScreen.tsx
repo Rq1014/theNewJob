@@ -51,7 +51,12 @@ export function OtpLoginScreen({ navigation, route }: Props) {
     try {
       setLoading(true);
       const tokens = await authApi.verifyOtp(channel, target.trim(), code.trim());
-      await setSession(tokens.accessToken, tokens.refreshToken, tokens.user);
+      await setSession(
+        tokens.accessToken,
+        tokens.refreshToken,
+        tokens.user,
+        tokens.expiresIn,
+      );
       if (tokens.user.profileStatus === 'incomplete') {
         navigation.replace('ProfileSetup');
       }

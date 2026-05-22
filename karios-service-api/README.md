@@ -26,6 +26,16 @@ export MYSQL_PASSWORD=你的密码
 
 开发 OTP 固定验证码：`123456`（`kairos.auth.otp.dev-code`）
 
+### 登录态（App 滑动续期）
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `kairos.auth.jwt.access-ttl-seconds` | 3600 | Access 1 小时，前端会提前 5 分钟静默刷新 |
+| `kairos.auth.jwt.refresh-ttl-days` | 90 | Refresh 滑动窗口 90 天（每次活跃/刷新从当前起算） |
+| `kairos.auth.jwt.slide-on-activity` | true | 已登录 API 请求每 5 分钟最多续期一次 |
+
+持续使用 App 时无需反复登录；超过 90 天未打开 App 需重新登录。
+
 ## 启动
 
 ```bash

@@ -52,6 +52,22 @@ function userTypeLabel(typeId?: string | null) {
   return USER_TYPES.find(t => t.id === typeId)?.label ?? '在读研究生';
 }
 
+/** 用服务端日期部分，避免时区把月份偏移 */
+function formatJoinDate(createdAt?: string | null): string | null {
+  if (!createdAt) {
+    return null;
+  }
+  const match = createdAt.match(/^(\d{4})-(\d{2})/);
+  if (!match) {
+    return null;
+  }
+  const month = parseInt(match[2], 10);
+  if (month < 1 || month > 12) {
+    return null;
+  }
+  return `${match[1]}年${month}月`;
+}
+
 export function ProfileHomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -75,8 +91,9 @@ export function ProfileHomeScreen({ navigation }: Props) {
     university: user?.university ?? '东京大学',
     location: cityLabel(user?.city),
     userType: userTypeLabel(user?.userType),
-    joinDate: '2024年3月',
+    joinDate: formatJoinDate(user?.createdAt),
     bio: user?.bio ?? '在东京的留学生活 | 喜欢探店和摄影 📷',
+    interests: user?.interests ?? '',
     isVerified: user?.isVerified ?? true,
     postsCount: user?.postsCount ?? 24,
     likesReceived: user?.likesReceived ?? 389,
@@ -112,7 +129,8 @@ export function ProfileHomeScreen({ navigation }: Props) {
               🛡 {displayUser.university}  ·  📍 {displayUser.location}
             </Text>
             <Text style={styles.metaSub}>
-              {displayUser.userType} · 📅 {displayUser.joinDate}加入
+              {displayUser.userType}
+              {displayUser.joinDate ? ` · 📅 ${displayUser.joinDate}加入` : ''}
             </Text>
           </View>
           <View style={styles.headerActions}>
@@ -129,6 +147,9 @@ export function ProfileHomeScreen({ navigation }: Props) {
           </View>
         </View>
         <Text style={styles.bio}>{displayUser.bio}</Text>
+        {displayUser.interests ? (
+          <Text style={styles.interests}>兴趣：{displayUser.interests}</Text>
+        ) : null}
         <View style={styles.statsGrid}>
           {[
             { value: displayUser.postsCount, label: '发布' },
@@ -257,7 +278,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconBtnText: { fontSize: 16, color: colors.textSecondary },
-  bio: { fontSize: 14, color: '#334155', lineHeight: 22, marginBottom: spacing.md },
+  bio: { fontSize: 14, color: '#334155', lineHeight: 22, marginBottom: spacing.sm },
+  interests: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
   statsGrid: { flexDirection: 'row' },
   statCell: { flex: 1, alignItems: 'center' },
   statValue: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },

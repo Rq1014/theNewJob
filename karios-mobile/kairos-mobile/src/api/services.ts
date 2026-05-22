@@ -21,6 +21,7 @@ import type {
   AuthTokens,
   Comment,
   Draft,
+  EditProfilePayload,
   FeedChannel,
   OtpChannel,
   PageResult,
@@ -161,6 +162,26 @@ export const userApi = {
       return { ...MOCK_USER };
     }
     const res = await apiClient.put('/users/me', data);
+    return normalizeUserProfile(unwrap(res) as Record<string, unknown>);
+  },
+
+  /** 编辑资料：固定带上 interests，避免旧 bundle 只传 nickname/bio/city */
+  async updateProfile(payload: EditProfilePayload): Promise<UserProfile> {
+    const body = {
+      nickname: payload.nickname,
+      bio: payload.bio,
+      interests: payload.interests,
+      city: payload.city,
+    };
+    if (!USE_REAL_AUTH_API) {
+      await delay();
+      Object.assign(MOCK_USER, body);
+      return { ...MOCK_USER };
+    }
+    if (__DEV__) {
+      console.log('[Kairos] PUT /users/me', JSON.stringify(body));
+    }
+    const res = await apiClient.put('/users/me', body);
     return normalizeUserProfile(unwrap(res) as Record<string, unknown>);
   },
 

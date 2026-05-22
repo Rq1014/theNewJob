@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
   nickname           VARCHAR(64)     NULL COMMENT '昵称，资料未完善时可为空',
   avatar_url         VARCHAR(512)    NULL COMMENT '头像 URL',
   bio                VARCHAR(500)    NULL COMMENT '个人简介',
+  interests          VARCHAR(500)    NULL COMMENT '兴趣爱好，逗号分隔，如 探店,摄影,日语学习',
   university         VARCHAR(128)    NULL COMMENT '学校名称',
   city               VARCHAR(32)     NULL COMMENT '常驻城市编码，如 tokyo、osaka',
   user_type          VARCHAR(32)     NULL COMMENT '用户身份类型，如 graduate_student',

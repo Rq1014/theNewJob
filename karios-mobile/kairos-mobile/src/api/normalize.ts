@@ -16,9 +16,12 @@ export function normalizeUserProfile(raw: Record<string, unknown>): UserProfile 
   return {
     ...base,
     bio: (raw.bio as string | null) ?? null,
+    interests: (raw.interests as string | null) ?? null,
     university: (raw.university as string | null) ?? null,
     city: (raw.city as string | null) ?? null,
     userType: (raw.userType as string | null) ?? null,
+    createdAt:
+      raw.createdAt != null ? String(raw.createdAt) : null,
     postsCount: raw.postsCount != null ? Number(raw.postsCount) : undefined,
     likesReceived:
       raw.likesReceived != null ? Number(raw.likesReceived) : undefined,

@@ -33,8 +33,12 @@ public class KairosProperties {
     @Data
     public static class Jwt {
         private String secret;
-        private long accessTtlSeconds = 900;
+        /** Access Token 有效期（秒），App 内会静默刷新 */
+        private long accessTtlSeconds = 3600;
+        /** Refresh 滑动窗口（天）：每次活跃/刷新从此刻起重新计算 */
         private int refreshTtlDays = 7;
+        /** 是否在已登录 API 请求时自动滑动续期 */
+        private boolean slideOnActivity = true;
     }
 
     @Data

@@ -36,8 +36,10 @@ kairos:
   auth:
     jwt:
       secret: ${JWT_SECRET:kairos-dev-jwt-secret-key-32bytes!!}
-      access-ttl-seconds: 900
-      refresh-ttl-days: 7
+      # App：Access 1h 静默刷新；Refresh 90 天滑动续期（活跃则顺延）
+      access-ttl-seconds: 3600
+      refresh-ttl-days: 90
+      slide-on-activity: true
     otp:
       ttl-seconds: 300
       cooldown-seconds: 60

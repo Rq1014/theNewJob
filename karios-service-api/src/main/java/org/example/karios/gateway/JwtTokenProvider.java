@@ -118,6 +118,42 @@ public class JwtTokenProvider {
         return Boolean.TRUE.equals(redisTemplate.hasKey(refreshRedisKey(userId, refreshJti)));
     }
 
+    /** 将 refresh 在 Redis 中的有效期从当前起重新计算为 refreshTtlDays（滑动续期）。 */
+    public void slideRefreshValidity(Long userId, String refreshJti) {
+        if (userId == null || refreshJti == null || refreshJti.isBlank()) {
+            return;
+        }
+        String key = refreshRedisKey(userId, refreshJti);
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+            redisTemplate.expire(key, java.time.Duration.ofDays(properties.getAuth().getJwt().getRefreshTtlDays()));
+        }
+    }
+
+    /**
+     * 重新签发 Refresh JWT（同一 jti），过期时间从当前起算 refreshTtlDays，并刷新 Redis。
+     */
+    public String reissueRefreshToken(Long userId, Long sessionId, String refreshJti) {
+        Instant now = Instant.now();
+        int days = properties.getAuth().getJwt().getRefreshTtlDays();
+        String token = Jwts.builder()
+                .id(refreshJti)
+                .subject(String.valueOf(userId))
+                .claim(CLAIM_TYP, TYPE_REFRESH)
+                .claim(CLAIM_SID, sessionId)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(days * 86400L)))
+                .signWith(secretKey)
+                .compact();
+        redisTemplate
+                .opsForValue()
+                .set(refreshRedisKey(userId, refreshJti), "1", java.time.Duration.ofDays(days));
+        return token;
+    }
+
+    public int getRefreshTtlDays() {
+        return properties.getAuth().getJwt().getRefreshTtlDays();
+    }
+
     public String refreshRedisKey(Long userId, String refreshJti) {
         return "refresh:" + userId + ":" + refreshJti;
     }

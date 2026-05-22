@@ -17,8 +17,20 @@ export interface UserSummary {
   isVerified: boolean;
 }
 
+/** 编辑资料页 PUT /users/me 固定字段，避免漏传 interests */
+export interface EditProfilePayload {
+  nickname: string;
+  bio: string;
+  interests: string;
+  city: string;
+}
+
 export interface UserProfile extends UserSummary {
+  /** ISO 8601，来自 users.created_at */
+  createdAt?: string | null;
   bio?: string | null;
+  /** 逗号分隔，如「探店, 摄影」 */
+  interests?: string | null;
   university?: string | null;
   city?: string | null;
   userType?: string | null;

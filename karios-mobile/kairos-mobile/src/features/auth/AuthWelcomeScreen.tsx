@@ -73,13 +73,23 @@ export function AuthWelcomeScreen({ navigation }: Props) {
           res.authorizationCode ?? undefined,
           appleUser,
         );
-        await setSession(tokens.accessToken, tokens.refreshToken, tokens.user);
+        await setSession(
+          tokens.accessToken,
+          tokens.refreshToken,
+          tokens.user,
+          tokens.expiresIn,
+        );
         if (tokens.user.profileStatus === 'incomplete') {
           navigation.replace('ProfileSetup');
         }
       } else if (!USE_REAL_AUTH_API) {
         const tokens = await authApi.loginApple('mock-token');
-        await setSession(tokens.accessToken, tokens.refreshToken, tokens.user);
+        await setSession(
+          tokens.accessToken,
+          tokens.refreshToken,
+          tokens.user,
+          tokens.expiresIn,
+        );
         navigation.replace('ProfileSetup');
       } else {
         Alert.alert('提示', 'Apple 登录仅支持 iOS 设备');

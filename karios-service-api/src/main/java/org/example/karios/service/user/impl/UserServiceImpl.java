@@ -1,5 +1,6 @@
 package org.example.karios.service.user.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.example.karios.common.BusinessException;
 import org.example.karios.common.ErrorCode;
 import org.example.karios.entity.UserEntity;
@@ -29,30 +30,58 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserProfileResponse updateMe(Long userId, UpdateUserRequest request) {
         UserEntity user = requireUser(userId);
+        LambdaUpdateWrapper<UserEntity> update = new LambdaUpdateWrapper<>();
+        update.eq(UserEntity::getId, userId);
+        boolean changed = false;
+
         if (request.getNickname() != null) {
+            update.set(UserEntity::getNickname, request.getNickname());
             user.setNickname(request.getNickname());
+            changed = true;
         }
         if (request.getAvatarUrl() != null) {
+            update.set(UserEntity::getAvatarUrl, request.getAvatarUrl());
             user.setAvatarUrl(request.getAvatarUrl());
+            changed = true;
         }
         if (request.getBio() != null) {
+            update.set(UserEntity::getBio, request.getBio());
             user.setBio(request.getBio());
+            changed = true;
+        }
+        if (request.getInterests() != null) {
+            update.set(UserEntity::getInterests, request.getInterests());
+            user.setInterests(request.getInterests());
+            changed = true;
         }
         if (request.getUniversity() != null) {
+            update.set(UserEntity::getUniversity, request.getUniversity());
             user.setUniversity(request.getUniversity());
+            changed = true;
         }
         if (request.getCity() != null) {
+            update.set(UserEntity::getCity, request.getCity());
             user.setCity(request.getCity());
+            changed = true;
         }
         if (request.getUserType() != null) {
+            update.set(UserEntity::getUserType, request.getUserType());
             user.setUserType(request.getUserType());
+            changed = true;
         }
         if (request.getProfileStatus() != null) {
+            update.set(UserEntity::getProfileStatus, request.getProfileStatus());
             user.setProfileStatus(request.getProfileStatus());
+            changed = true;
         } else if (isProfileComplete(user)) {
+            update.set(UserEntity::getProfileStatus, "complete");
             user.setProfileStatus("complete");
+            changed = true;
         }
-        userMapper.updateById(user);
+
+        if (changed) {
+            userMapper.update(null, update);
+        }
         return UserConverter.toProfile(userMapper.selectById(userId));
     }
 

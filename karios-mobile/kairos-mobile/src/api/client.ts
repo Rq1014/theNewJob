@@ -1,5 +1,6 @@
-import axios, { AxiosError } from 'axios';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../config';
+import { ensureFreshAccessToken } from './sessionRefresh';
 import { getAccessToken, useAuthStore } from '../store/authStore';
 import type { ApiResponse } from './types';
 
@@ -9,7 +10,14 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-apiClient.interceptors.request.use(config => {
+apiClient.interceptors.request.use(async config => {
+  if (!config.url?.includes('/auth/refresh')) {
+    try {
+      await ensureFreshAccessToken();
+    } catch {
+      /* 续期失败留待响应拦截器处理 */
+    }
+  }
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -26,9 +34,30 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<ApiResponse<unknown>>) => {
-    if (error.response?.status === 401) {
+    const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const status = error.response?.status;
+    const { refreshToken } = useAuthStore.getState();
+
+    if (
+      status === 401
+      && refreshToken
+      && original
+      && !original._retry
+      && !original.url?.includes('/auth/refresh')
+      && !original.url?.includes('/auth/otp')
+    ) {
+      original._retry = true;
+      try {
+        await ensureFreshAccessToken(true);
+        original.headers.Authorization = `Bearer ${getAccessToken()}`;
+        return apiClient.request(original);
+      } catch {
+        await useAuthStore.getState().logout();
+      }
+    } else if (status === 401) {
       await useAuthStore.getState().logout();
     }
+
     const message =
       error.response?.data?.message || error.message || '网络错误';
     return Promise.reject(new Error(message));

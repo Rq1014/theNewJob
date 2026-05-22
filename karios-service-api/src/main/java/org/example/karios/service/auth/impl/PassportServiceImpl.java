@@ -20,6 +20,7 @@ import org.example.karios.model.bo.auth.LoginResult;
 import org.example.karios.model.response.auth.AuthTokensResponse;
 import org.example.karios.model.response.auth.RefreshTokenResponse;
 import org.example.karios.service.auth.PassportService;
+import org.example.karios.service.auth.SessionSlideService;
 import org.example.karios.service.user.UserConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,18 +36,21 @@ public class PassportServiceImpl implements PassportService {
     private final UserTermsConsentMapper consentMapper;
     private final UserSessionMapper sessionMapper;
     private final JwtTokenProvider jwtTokenProvider;
+    private final SessionSlideService sessionSlideService;
 
     public PassportServiceImpl(
             UserMapper userMapper,
             UserAuthBindingMapper bindingMapper,
             UserTermsConsentMapper consentMapper,
             UserSessionMapper sessionMapper,
-            JwtTokenProvider jwtTokenProvider) {
+            JwtTokenProvider jwtTokenProvider,
+            SessionSlideService sessionSlideService) {
         this.userMapper = userMapper;
         this.bindingMapper = bindingMapper;
         this.consentMapper = consentMapper;
         this.sessionMapper = sessionMapper;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.sessionSlideService = sessionSlideService;
     }
 
     /** 凭证首次出现则注册；否则校验账号状态并更新最近登录时间。 */
@@ -140,8 +144,14 @@ public class PassportServiceImpl implements PassportService {
         }
 
         Long sessionId = claims.get(JwtTokenProvider.CLAIM_SID, Long.class);
+        sessionSlideService.touchSession(sessionId);
         String accessToken = jwtTokenProvider.issueAccessOnly(userId, sessionId);
-        return new RefreshTokenResponse(accessToken, jwtTokenProvider.getAccessTtlSeconds());
+        String newRefresh = jwtTokenProvider.reissueRefreshToken(userId, sessionId, refreshJti);
+        return new RefreshTokenResponse(
+                accessToken,
+                jwtTokenProvider.getAccessTtlSeconds(),
+                newRefresh,
+                jwtTokenProvider.getRefreshTtlDays());
     }
 
     @Override

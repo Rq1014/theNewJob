@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { ensureFreshAccessToken } from '../api/sessionRefresh';
 import { useAuthStore } from '../store/authStore';
 import { AuthStack } from './AuthStack';
 import { MainTabs } from './MainTabs';
@@ -14,7 +15,17 @@ export function RootNavigator() {
   const { accessToken, user, isHydrated, hydrate } = useAuthStore();
 
   useEffect(() => {
-    hydrate();
+    (async () => {
+      await hydrate();
+      const { refreshToken } = useAuthStore.getState();
+      if (refreshToken) {
+        try {
+          await ensureFreshAccessToken(true);
+        } catch {
+          /* 刷新失败则保持未登录或走 401 清理 */
+        }
+      }
+    })();
   }, [hydrate]);
 
   if (!isHydrated) {

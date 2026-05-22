@@ -10,6 +10,7 @@ import java.util.List;
 import org.example.karios.common.ApiResponse;
 import org.example.karios.common.ErrorCode;
 import org.example.karios.config.KairosProperties;
+import org.example.karios.service.auth.SessionSlideService;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -23,10 +24,15 @@ public class AuthGatewayFilter extends OncePerRequestFilter {
 
     private final KairosProperties properties;
     private final JwtTokenProvider jwtTokenProvider;
+    private final SessionSlideService sessionSlideService;
 
-    public AuthGatewayFilter(KairosProperties properties, JwtTokenProvider jwtTokenProvider) {
+    public AuthGatewayFilter(
+            KairosProperties properties,
+            JwtTokenProvider jwtTokenProvider,
+            SessionSlideService sessionSlideService) {
         this.properties = properties;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.sessionSlideService = sessionSlideService;
     }
 
     /** 按配置白名单或 Bearer Token 决定是否放行，并在 finally 中清理线程上下文。 */
@@ -69,6 +75,7 @@ public class AuthGatewayFilter extends OncePerRequestFilter {
             Long userId = Long.parseLong(claims.getSubject());
             Long sessionId = claims.get(JwtTokenProvider.CLAIM_SID, Long.class);
             RequestContext.set(userId, sessionId, jti);
+            sessionSlideService.touchOnActivity(sessionId);
             filterChain.doFilter(request, response);
         } finally {
             RequestContext.clear();

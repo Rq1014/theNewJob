@@ -32,9 +32,11 @@ public final class UserConverter {
         response.setProfileStatus(summary.getProfileStatus());
         response.setVerified(summary.isVerified());
         response.setBio(user.getBio());
+        response.setInterests(user.getInterests());
         response.setUniversity(user.getUniversity());
         response.setCity(user.getCity());
         response.setUserType(user.getUserType());
+        response.setCreatedAt(user.getCreatedAt());
         response.setPostsCount(0);
         response.setLikesReceived(0);
         response.setFavoritesCount(0);
